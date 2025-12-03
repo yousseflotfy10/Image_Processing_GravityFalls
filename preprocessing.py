@@ -17,19 +17,20 @@ def get_grid(folder_name):
         return 8
     return None
 
-def preprocess(img):
+def preprocess(img, out_dir, base):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite(os.path.join(out_dir, f"{base}_stage1_gray.png"), gray)
+
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    cv2.imwrite(os.path.join(out_dir, f"{base}_stage2_blur.png"), blur)
 
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     enh = clahe.apply(blur)
+    cv2.imwrite(os.path.join(out_dir, f"{base}_stage3_clahe.png"), enh)
 
-    sharp_kernel = np.array([
-        [0, -1, 0],
-        [-1, 5, -1],
-        [0, -1, 0]
-    ])
-    sharp = cv2.filter2D(enh, -1, sharp_kernel)
+    k = np.array([[0,-1,0],[-1,5,-1],[0,-1,0]])
+    sharp = cv2.filter2D(enh, -1, k)
+    cv2.imwrite(os.path.join(out_dir, f"{base}_stage4_sharp.png"), sharp)
 
     return sharp
 
@@ -55,11 +56,10 @@ for folder in os.listdir(DATASET):
             continue
 
         base = os.path.splitext(os.path.basename(path))[0]
-
         image_out_folder = os.path.join(grid_folder, base)
         os.makedirs(image_out_folder, exist_ok=True)
 
-        _ = preprocess(img)
+        proc = preprocess(img, image_out_folder, base)
 
         h, w = img.shape[:2]
         tile_h = h // grid
@@ -80,5 +80,4 @@ for folder in os.listdir(DATASET):
                     f"{base}_piece_{piece_id}.png"
                 )
                 cv2.imwrite(out_path, piece)
-
                 piece_id += 1
